@@ -29,14 +29,8 @@ module Partners
           redirect_to partners_profile_path
         end
       else
-        flash.now[:error] = "There is a problem. Try again:  %s" % result.error
-        if Flipper.enabled?("partner_step_form")
-          error_keys = current_partner.profile.errors.attribute_names
-          @sections_with_errors = Partners::SectionErrorService.sections_with_errors(error_keys)
-          render "partners/profiles/step/edit"
-        else
-          render :edit
-        end
+        flash[:error] = "There is a problem. Please fix the following error: %s" % result.error
+        redirect_to edit_partners_profile_path
       end
     end
 

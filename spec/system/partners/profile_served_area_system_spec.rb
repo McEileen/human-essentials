@@ -11,16 +11,35 @@ RSpec.describe "Partners profile served area behaviour", type: :system, js: true
       visit edit_partners_profile_path
     end
 
-    it "handles an invalid total client share properly" do
-      county_1_text = find_field("partner_profile_served_areas_attributes_0_county_id").find("option[selected]").text
-      select "26", from: "partner_profile_served_areas_attributes_0_client_share"
-      expect(page).to have_content("101 %")
-      expect(page).to have_content("The total client share must be either 0 or 100 %")
-      click_on "Update Information"
-      text_2 = find_field("partner_profile_served_areas_attributes_0_county_id").find("option[selected]").text
-      expect(text_2).to eq(county_1_text)
-      expect(page).to have_field("partner_profile_served_areas_attributes_0_client_share", with: "26")
-      expect(page).to have_content("The total client share must be either 0 or 100 %")
+    context "to an invalid client share" do
+      before do
+        select "26", from: "partner_profile_served_areas_attributes_0_client_share"
+      end
+      it "does not persist client share changes or proof of status document uploads" do
+        # User sees errors in the client share section
+        expect(page).to have_content("101 %")
+        expect(page).to have_content("The total client share must be either 0 or 100 %")
+        # User attempts to upload a document
+        import_path = "#{Rails.root}/spec/fixtures/files/dbase.pdf"
+        attach_file("partner[profile][proof_of_partner_status]", import_path)
+        click_on "Update Information"
+        assert page.has_content? "There is a problem. Please fix the following error: Validation failed: Total client share must be 0 or 100"
+        # Client share changes don't persist
+        expect(page).to have_content("100 %")
+        # Document changes do not persist
+        expect(page).not_to have_content("dbase.pdf")
+      end
+
+      it "handles an invalid total client share properly" do
+        county_1_text = find_field("partner_profile_served_areas_attributes_0_county_id").find("option[selected]").text
+        expect(page).to have_content("101 %")
+        expect(page).to have_content("The total client share must be either 0 or 100 %")
+        click_on "Update Information"
+        text_2 = find_field("partner_profile_served_areas_attributes_0_county_id").find("option[selected]").text
+        expect(text_2).to eq(county_1_text)
+        expect(page).to have_field("partner_profile_served_areas_attributes_0_client_share", with: "26")
+        expect(page).to have_content("The total client share must be either 0 or 100 %")
+      end
     end
 
     it "handles a changed but correct total client share properly" do
