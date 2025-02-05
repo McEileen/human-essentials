@@ -9,7 +9,8 @@ RSpec.describe ItemizableUpdateService do
     TestInventory.create_inventory(storage_location.organization, {
       storage_location.id => {
         item1.id => 10,
-        item2.id => 10
+        item2.id => 10,
+        item3.id => 10
       },
       new_storage_location.id => {
         item1.id => 10,
@@ -51,12 +52,12 @@ RSpec.describe ItemizableUpdateService do
     end
 
     it "should update quantity in same storage location" do
-      expect(storage_location.size).to eq(20)
+      expect(storage_location.size).to eq(30)
       expect(new_storage_location.size).to eq(20)
       subject
       expect(itemizable.reload.line_items.count).to eq(2)
       expect(itemizable.line_items.sum(&:quantity)).to eq(4)
-      expect(storage_location.size).to eq(14)
+      expect(storage_location.size).to eq(24)
       expect(new_storage_location.size).to eq(20)
       expect(itemizable.issued_at).to eq(2.days.ago)
       expect(UpdateExistingEvent.count).to eq(1)
@@ -78,7 +79,7 @@ RSpec.describe ItemizableUpdateService do
           subject
           expect(itemizable.reload.line_items.count).to eq(2)
           expect(itemizable.line_items.sum(&:quantity)).to eq(4)
-          expect(storage_location.size).to eq(10)
+          expect(storage_location.size).to eq(20)
           expect(new_storage_location.size).to eq(24)
         end
       end
@@ -126,12 +127,12 @@ RSpec.describe ItemizableUpdateService do
     end
 
     it "should update quantity in same storage location" do
-      expect(storage_location.size).to eq(20)
+      expect(storage_location.size).to eq(30)
       expect(new_storage_location.size).to eq(20)
       subject
       expect(itemizable.reload.line_items.count).to eq(2)
       expect(itemizable.line_items.sum(&:quantity)).to eq(4)
-      expect(storage_location.size).to eq(26)
+      expect(storage_location.size).to eq(36)
       expect(new_storage_location.size).to eq(20)
       expect(itemizable.issued_at).to eq(2.days.ago)
     end
@@ -152,7 +153,7 @@ RSpec.describe ItemizableUpdateService do
           subject
           expect(itemizable.reload.line_items.count).to eq(2)
           expect(itemizable.line_items.sum(&:quantity)).to eq(4)
-          expect(storage_location.size).to eq(30)
+          expect(storage_location.size).to eq(40)
           expect(new_storage_location.size).to eq(16)
         end
       end
@@ -197,33 +198,26 @@ RSpec.describe ItemizableUpdateService do
       it "should send an itemizable event if it already exists" do
         DonationEvent.publish(itemizable)
         expect(DonationEvent.count).to eq(1)
-        expect(View::Inventory.total_inventory(organization.id)).to eq(60)
+        expect(View::Inventory.total_inventory(organization.id)).to eq(70)
 
         described_class.call(itemizable: itemizable, params: attributes, event_class: DonationEvent)
 
         expect(DonationEvent.count).to eq(2)
-        expect(View::Inventory.total_inventory(organization.id)).to eq(95)
+        expect(View::Inventory.total_inventory(organization.id)).to eq(105)
       end
 
       it "should send an update event if it does not exist" do
         expect(DonationEvent.count).to eq(0)
-        expect(View::Inventory.total_inventory(organization.id)).to eq(40)
+        expect(View::Inventory.total_inventory(organization.id)).to eq(50)
 
         described_class.call(itemizable: itemizable, params: attributes, event_class: DonationEvent)
 
         expect(DonationEvent.count).to eq(0)
         expect(UpdateExistingEvent.count).to eq(1)
-        expect(View::Inventory.total_inventory(organization.id)).to eq(75) # 40 - 5 (item1) - 10 (item2) + 50 (item3)
+        expect(View::Inventory.total_inventory(organization.id)).to eq(85) # 50 - 5 (item1) - 10 (item2) + 50 (item3)
       end
     end
     describe "with distributions" do
-      before(:each) do
-        TestInventory.create_inventory(storage_location.organization, {
-          storage_location.id => {
-            item3.id => 10
-          }
-        })
-      end
       let(:itemizable) do
         line_items = [
           create(:line_item, item_id: item1.id, quantity: 5),
